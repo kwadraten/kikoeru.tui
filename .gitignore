@@ -1,0 +1,34 @@
+# Build output
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Test output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+# IDE and editor state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local agent captures and temporary diagnostics
+.agent/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs and local environment
+*.log
+.env
+.env.*

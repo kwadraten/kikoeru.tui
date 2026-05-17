@@ -258,8 +258,10 @@ let PlayPreviousTrack () =
 
 let PlayNextTrack () =
     let count = globalState.PlayingList.Length
-    let index = (globalState.PlayingIndex + 1) % count
-    startTrackAt index
+
+    match count with
+    | 0 -> startTrackAt 0
+    | _ -> ((globalState.PlayingIndex + 1) % count) |> startTrackAt
 
 
 let TogglePlayPause () =

@@ -7,58 +7,6 @@ open Hex1b.Widgets
 open kikoeru.tui.Components
 open kikoeru.tui.ViewState
 
-let private nonEmptyItems (items: string array) =
-    items |> Array.filter (fun item -> not (System.String.IsNullOrWhiteSpace item))
-
-let private chipButton text = ButtonWidget(text) :> Hex1bWidget
-
-let private chipsRow label (items: string array) =
-    let chips =
-        items
-        |> nonEmptyItems
-        |> Array.mapi (fun index item ->
-            if index = 0 then
-                [| chipButton item |]
-            else
-                [| TextBlockWidget " " :> Hex1bWidget; chipButton item |])
-        |> Array.concat
-
-    HStackWidget(Array.concat [ [| TextBlockWidget(label) :> Hex1bWidget |]; chips ]) :> Hex1bWidget
-
-let private workTitle () =
-    globalState.CurrentWork |> Option.map _.title |> Option.defaultValue "未选择作品"
-
-let private circleButton () =
-    globalState.CurrentWork
-    |> Option.bind (fun work ->
-        if String.IsNullOrWhiteSpace work.circle then
-            None
-        else
-            Some(chipButton $"社团: {work.circle}"))
-
-let private vasItems () =
-    globalState.CurrentWork |> Option.map _.vas |> Option.defaultValue Array.empty
-
-let private tagsItems () =
-    globalState.CurrentWork |> Option.map _.tags |> Option.defaultValue Array.empty
-
-let private titleRow () =
-    let right =
-        circleButton () |> Option.defaultValue (TextBlockWidget "" :> Hex1bWidget)
-
-    HStackWidget(
-        [| TextBlockWidget(workTitle ()) :> Hex1bWidget
-           AlignWidget(right, Alignment.Right).Fill() :> Hex1bWidget |]
-    )
-    :> Hex1bWidget
-
-let private metadataView () =
-    seq {
-        titleRow ()
-        chipsRow "声优: " (vasItems ())
-        chipsRow "Tag: " (tagsItems ())
-    }
-
 let private sampleSpectrum (bands: float array) width x =
     if bands.Length = 0 then
         0.0
@@ -99,7 +47,9 @@ let private spectrumView () =
 let render () =
     if globalState.HasPlaying() then
         seq {
-            yield! metadataView ()
+            globalState.CurrentWork
+            |> Option.map (WorkInfo.render WorkInfo.Text)
+            |> Option.defaultValue (Placeholder.render "未选择作品")
             TextBlockWidget "" :> Hex1bWidget
             spectrumView ()
         }

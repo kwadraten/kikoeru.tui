@@ -92,38 +92,10 @@ let private startLoad reset =
 
 let private openDetail (_work: PlayingWorkType) = ()
 
-let private joinItems (items: string array) =
-    let text =
-        items
-        |> Array.filter (fun item -> not (String.IsNullOrWhiteSpace item))
-        |> String.concat "、"
-
-    if String.IsNullOrWhiteSpace text then "无" else text
-
-let private resultItem (work: PlayingWorkType) =
-    let titleButton =
-        ButtonWidget(work.title).OnClick(fun _ -> openDetail work).Fill() :> Hex1bWidget
-
-    BorderWidget(
-        VStackWidget(
-            [| titleButton
-               TextBlockWidget(
-                   sprintf
-                       "社团: %s"
-                       (if String.IsNullOrWhiteSpace work.circle then
-                            "未知"
-                        else
-                            work.circle)
-               )
-                   .Fill()
-               TextBlockWidget(sprintf "声优: %s" (joinItems work.vas)).Fill()
-               TextBlockWidget(sprintf "Tag: %s" (joinItems work.tags)).Fill() |]
-        )
-    )
-    :> Hex1bWidget
-
 let private resultsView () =
-    let items = copyResults () |> Array.collect (fun work -> [| resultItem work |])
+    let items =
+        copyResults ()
+        |> Array.map (WorkInfo.render (WorkInfo.Button openDetail))
 
     match items.Length with
     | 0 -> Placeholder.render statusText

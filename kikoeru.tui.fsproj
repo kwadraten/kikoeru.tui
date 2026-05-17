@@ -12,6 +12,7 @@
     <Compile Include="Audio.fs" />
     <Compile Include="Components\Placeholder.fs" />
     <Compile Include="Views\ViewState.fs" />
+    <Compile Include="Components\WorkInfo.fs" />
     <Compile Include="Views\PlayingView.fs" />
     <Compile Include="Views\MediaView.fs" />
     <Compile Include="Views\SearchView.fs" />

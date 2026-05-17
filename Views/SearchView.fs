@@ -3,6 +3,7 @@ module kikoeru.tui.Views.SearchView
 open System
 open Hex1b
 open Hex1b.Widgets
+open kikoeru.tui.Components
 open kikoeru.tui.ViewState
 open kikoeru.tui.WebApi
 open kikoeru.tui.WebApiType
@@ -124,18 +125,13 @@ let private resultItem (work: PlayingWorkType) =
 let private resultsView () =
     let items = copyResults () |> Array.collect (fun work -> [| resultItem work |])
 
-    let children =
-        if items.Length = 0 then
-            [| AlignWidget(TextBlockWidget(statusText), Alignment.Center) :> Hex1bWidget |]
-        else
+    match items.Length with
+    | 0 -> Placeholder.render statusText
+    | _ ->
+        let children =
             Array.append items [| AlignWidget(TextBlockWidget(statusText), Alignment.Center) :> Hex1bWidget |]
 
-    ScrollPanelWidget(VStackWidget children, ScrollOrientation.Vertical, true)
-        .OnScroll(fun e ->
-            if e.IsAtEnd && hasMore && not isLoading then
-                startLoad false)
-        .Fill()
-    :> Hex1bWidget
+        ScrollPanelWidget(VStackWidget children, ScrollOrientation.Vertical, true) :> Hex1bWidget
 
 let render () : Hex1bWidget seq =
     let searchBox =

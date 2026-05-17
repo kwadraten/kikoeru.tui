@@ -6,20 +6,19 @@ open Hex1b.Widgets
 open kikoeru.tui.ViewState
 open kikoeru.tui.Views
 
-let InitializeFromArgs (argv: string array) (ct: CancellationToken) =
-    ViewState.InitializeFromArgs argv ct
+let InitializeFromArgs (argv: string array) (ct: CancellationToken) = ViewState.InitializeFromArgs argv ct
 
 let WidgetsTree () =
     let firstTabPara b =
         match b with
-        | true -> TabItemWidget("Playing", fun ctx -> PlayingView.render ())
-        | false -> TabItemWidget("Welcome", fun ctx -> WelcomeView.render ())
+        | true -> TabItemWidget("播放", fun ctx -> PlayingView.render ())
+        | false -> TabItemWidget("欢迎", fun ctx -> WelcomeView.render ())
 
     (VStackWidget
         [| TabPanelWidget(
                [| firstTabPara (globalState.HasPlaying())
-                  TabItemWidget("Browse Media", fun t -> MediaView.render ())
-                  TabItemWidget("Search", fun t -> SearchView.render ()) |]
+                  TabItemWidget("媒体库", fun t -> MediaView.render ())
+                  TabItemWidget("搜索", fun t -> SearchView.render ()) |]
            )
                .Selector()
                .Fill()

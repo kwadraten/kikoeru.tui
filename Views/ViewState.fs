@@ -8,7 +8,7 @@ open kikoeru.tui.WebApi
 open kikoeru.tui.WebApiType
 
 let private defaultBaseUrl = "https://api.asmr-200.com/api"
-let private healthCheckIntervalMs = 1000
+let private healthCheckIntervalMs = 3000
 
 type PlayingWorkType =
     { id: int
@@ -42,6 +42,7 @@ type GlobalModel() =
     member val PlayingIndex = -1 with get, set
     member val PlaybackMode = ListPlay with get, set
     member val WorkId = 0 with get, set
+    member val ActiveTabIndex = 0 with get, set
     member val IsPlaying = false with get, set
     member val PlaybackStatus = PlaybackStatus.Idle "空闲" with get, set
     member val PlayingFile: PlayingListItemType option = None with get, set

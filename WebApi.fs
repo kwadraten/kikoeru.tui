@@ -107,8 +107,8 @@ let GetSearch (baseUrl: string) (payload: WorksByKeywordPayload) : Result<WorksD
         let queryArgs =
             buildQueryParams payload.order payload.sort payload.page None payload.pageSize payload.subtitle
 
-        let encodedKeyword = System.Web.HttpUtility.UrlEncode(payload.keyword)
-        let url = sprintf "%s/search/%s&keyword=%s" baseUrl queryArgs encodedKeyword
+        let encodedKeyword = Uri.EscapeDataString(payload.keyword)
+        let url = sprintf "%s/search/%s%s" baseUrl encodedKeyword queryArgs
         Ok(fetch<WorksDto> url)
     with ex ->
         Error ex.Message

@@ -1,5 +1,7 @@
 module kikoeru.tui.WebApiType
 
+open System.Text.Json
+
 (*
 // 命名原则：
 // 1. Get和Post开头的是请求方法
@@ -166,7 +168,7 @@ type WorkDto =
       create_date: string
       vas: va array
       tags: TagDto array
-      language_editions: languageEdition array
+      language_editions: JsonElement
       //   original_workno: string option
       other_language_editions_in_db: languageEditionInDB array
       translation_info: translationInfo option

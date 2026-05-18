@@ -39,7 +39,7 @@ let parseCliArguments (argv: string array) =
     with :? ArguParseException as ex ->
         Error ex.Message
 
-let private hasMp3Suffix (text: string) =
+let private hasAudioSuffix (text: string) =
     let value =
         try
             Uri(text).AbsolutePath
@@ -47,14 +47,15 @@ let private hasMp3Suffix (text: string) =
             text.Split('?')[0]
 
     value.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase)
+    || value.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)
 
-let private isMp3Audio item =
+let private isAudio item =
     match item with
     | Audio file ->
-        hasMp3Suffix file.title
-        || hasMp3Suffix file.mediaStreamUrl
-        || hasMp3Suffix file.mediaDownloadUrl
-        || (file.streamLowQualityUrl |> Option.exists hasMp3Suffix)
+        hasAudioSuffix file.title
+        || hasAudioSuffix file.mediaStreamUrl
+        || hasAudioSuffix file.mediaDownloadUrl
+        || (file.streamLowQualityUrl |> Option.exists hasAudioSuffix)
     | _ -> false
 
 let rec dfs (visitedNode: ItemDto list) (fileTree: ItemDto list) : Folder option =
@@ -69,7 +70,7 @@ let rec dfs (visitedNode: ItemDto list) (fileTree: ItemDto list) : Folder option
         | Folder f ->
             let children = f.children |> List.ofArray
 
-            if children |> List.exists isMp3Audio then
+            if children |> List.exists isAudio then
                 Some f
             else
                 match dfs (head :: visitedNode) children with

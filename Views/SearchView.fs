@@ -52,6 +52,7 @@ let private startLoad reset =
             nextPage <- 1
             hasMore <- false
             requestGeneration <- requestGeneration + 1
+            lock stateLock (fun () -> searchResults.Clear())
 
         let page = nextPage
         let generation = requestGeneration
@@ -59,8 +60,8 @@ let private startLoad reset =
         async {
             let payload =
                 { keyword = targetKeyword
-                  order = "nsfw"
-                  sort = None
+                  order = "id"
+                  sort = Some "desc"
                   page = Some page
                   pageSize = pageSize
                   subtitle = false }
@@ -90,15 +91,14 @@ let private startLoad reset =
         }
         |> Async.Start
 
-let private openDetail (_work: PlayingWorkType) = ()
+let private openDetail (work: PlayingWorkType) = OpenDetailView work.id
 
 let private resultsView () =
     let items =
-        copyResults ()
-        |> Array.map (WorkInfo.render (WorkInfo.Button openDetail))
+        copyResults () |> Array.map (WorkInfo.render (WorkInfo.Button openDetail))
 
     match items.Length with
-    | 0 -> Placeholder.render statusText
+    | 0 -> Placeholder.render (TextBlockWidget(statusText) :> Hex1bWidget)
     | _ ->
         let children =
             Array.append items [| AlignWidget(TextBlockWidget(statusText), Alignment.Center) :> Hex1bWidget |]

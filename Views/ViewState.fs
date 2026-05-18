@@ -49,6 +49,7 @@ type GlobalModel() =
     member val PlayingDuration = 0.0 with get, set
     member val PlayingTime = 0.0 with get, set
     member val Spectrum = Array.zeroCreate<float> 64 with get, set
+    member val DetailTabWorkIds: int list = [] with get, set
 
     member this.HasPlaying() = this.PlayingList.Length > 0
 
@@ -60,6 +61,8 @@ let mutable private playbackToken = CancellationToken.None
 let mutable private playbackGeneration = 0
 let mutable private trackCts: CancellationTokenSource option = None
 let private random = Random()
+
+let private randomApiSeed () = random.Next(1, 100)
 
 let private nextPlaybackGeneration () =
     playbackGeneration <- playbackGeneration + 1
@@ -144,13 +147,60 @@ let private inferWorkFromList workId (playingList: PlayingListType) =
       vas = Array.empty
       tags = Array.empty }
 
-let private workToPlayingWork (work: WorkDto) =
+let workToPlayingWork (work: WorkDto) =
     { id = work.id
       title = work.title
       duration = work.duration
       circle = work.circle.name
       vas = work.vas |> Array.map _.name
       tags = work.tags |> Array.choose (fun tag -> tag.name) }
+
+let OpenDetailView workId =
+    if not (globalState.DetailTabWorkIds |> List.contains workId) then
+        globalState.DetailTabWorkIds <- globalState.DetailTabWorkIds @ [ workId ]
+
+    let detailIndex =
+        globalState.DetailTabWorkIds
+        |> List.findIndex ((=) workId)
+
+    globalState.ActiveTabIndex <- 3 + detailIndex
+
+let CloseDetailView workId =
+    let removedIndex =
+        globalState.DetailTabWorkIds
+        |> List.tryFindIndex ((=) workId)
+
+    match removedIndex with
+    | Some index ->
+        globalState.DetailTabWorkIds <-
+            globalState.DetailTabWorkIds
+            |> List.filter ((<>) workId)
+
+        let baseDetailIndex = 3 + index
+        let tabCount = 3 + globalState.DetailTabWorkIds.Length
+
+        globalState.ActiveTabIndex <-
+            if tabCount = 0 then
+                0
+            elif globalState.ActiveTabIndex = baseDetailIndex then
+                min baseDetailIndex (tabCount - 1)
+            elif globalState.ActiveTabIndex > baseDetailIndex then
+                globalState.ActiveTabIndex - 1
+            else
+                min globalState.ActiveTabIndex (tabCount - 1)
+    | None -> ()
+
+let SelectNextTab () =
+    let tabCount = 3 + globalState.DetailTabWorkIds.Length
+
+    if tabCount > 0 then
+        globalState.ActiveTabIndex <- (globalState.ActiveTabIndex + 1) % tabCount
+
+let SelectPreviousTab () =
+    let tabCount = 3 + globalState.DetailTabWorkIds.Length
+
+    if tabCount > 0 then
+        globalState.ActiveTabIndex <- (globalState.ActiveTabIndex - 1 + tabCount) % tabCount
 
 let private setCurrentPlayingItem index =
     let item = globalState.PlayingList[index]
@@ -292,6 +342,68 @@ let TogglePlaybackMode () =
         | SingleLoop -> Shuffle
         | Shuffle -> ListPlay
 
+let PlayWorkFolderFile (work: PlayingWorkType) (folder: Folder) (file: File) =
+    let playingList = folderToPlayingList folder
+
+    if playingList.Length = 0 then
+        globalState.PlaybackStatus <- PlaybackStatus.Failed(sprintf "%s 中没有可播放音频" folder.title)
+    else
+        let selectedIndex =
+            playingList
+            |> Array.tryFindIndex (fun item ->
+                item.mediaStreamUrl = file.mediaStreamUrl
+                || item.mediaDownloadUrl = file.mediaDownloadUrl
+                || item.title = file.title)
+            |> Option.defaultValue 0
+
+        globalState.WorkId <- work.id
+        globalState.CurrentWork <- Some work
+        globalState.PlayingList <- playingList
+        startTrackAt selectedIndex
+
+let PlayWorkFromFirstAudio (work: PlayingWorkType) (tracks: TrackDto) =
+    match tracks |> List.ofArray |> dfs [] with
+    | Some folder ->
+        let playingList = folderToPlayingList folder
+
+        if playingList.Length = 0 then
+            globalState.PlaybackStatus <- PlaybackStatus.Failed(sprintf "%s 中没有可播放音频" work.title)
+        else
+            globalState.WorkId <- work.id
+            globalState.CurrentWork <- Some work
+            globalState.PlayingList <- playingList
+            startTrackAt 0
+    | None -> globalState.PlaybackStatus <- PlaybackStatus.Failed(sprintf "%s 中没有找到可播放音频" work.title)
+
+let PlayRandomWork () =
+    async {
+        globalState.PlaybackStatus <- PlaybackStatus.Loading "正在随机挑选作品..."
+
+        let payload =
+            { order = "random"
+              sort = None
+              page = Some 1
+              seed = Some(randomApiSeed ())
+              pageSize = 1
+              subtitle = false }
+
+        match GetWorks globalState.BaseUrl payload with
+        | Error message -> globalState.PlaybackStatus <- PlaybackStatus.Failed(sprintf "随机获取作品失败：%s" message)
+        | Ok dto ->
+            match dto.works |> Array.tryHead with
+            | None -> globalState.PlaybackStatus <- PlaybackStatus.Failed "随机接口没有返回作品"
+            | Some work ->
+                let playingWork = workToPlayingWork work
+                globalState.PlaybackStatus <- PlaybackStatus.Loading(sprintf "正在读取 %s 的媒体文件..." playingWork.title)
+
+                match GetTracks globalState.BaseUrl { id = playingWork.id } with
+                | Ok tracks -> PlayWorkFromFirstAudio playingWork tracks
+                | Error message ->
+                    globalState.PlaybackStatus <-
+                        PlaybackStatus.Failed(sprintf "读取 work %d 失败：%s" playingWork.id message)
+    }
+    |> Async.Start
+
 let private loadWorkAndPlay (workId: int) (ct: CancellationToken) =
     async {
         globalState.WorkId <- workId
@@ -314,7 +426,7 @@ let private loadWorkAndPlay (workId: int) (ct: CancellationToken) =
                         | Error _ -> Some(inferWorkFromList workId playingList)
 
                     startTrackAt 0
-            | None -> globalState.PlaybackStatus <- PlaybackStatus.Failed(sprintf "work %d 中没有找到包含 mp3 音频的文件夹" workId)
+            | None -> globalState.PlaybackStatus <- PlaybackStatus.Failed(sprintf "work %d 中没有找到包含音频的文件夹" workId)
         | Error message ->
             globalState.PlaybackStatus <- PlaybackStatus.Failed(sprintf "读取 work %d 失败：%s" workId message)
     }

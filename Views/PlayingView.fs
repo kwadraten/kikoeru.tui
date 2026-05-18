@@ -49,9 +49,18 @@ let render () =
         seq {
             globalState.CurrentWork
             |> Option.map (WorkInfo.render WorkInfo.Text)
-            |> Option.defaultValue (Placeholder.render "未选择作品")
+            |> Option.defaultValue (Placeholder.render (TextBlockWidget("未选择作品") :> Hex1bWidget))
             TextBlockWidget "" :> Hex1bWidget
             spectrumView ()
         }
     else
-        seq { Placeholder.render "请选择一个作品开始播放" }
+        let randomButton =
+            ButtonWidget("随便听听").OnClick(fun _ -> PlayRandomWork()) :> Hex1bWidget
+
+        let tip =
+            HStackWidget
+                [| TextBlockWidget("按Tab键发现更多内容或") :> Hex1bWidget
+                   randomButton |]
+            :> Hex1bWidget
+
+        seq { Placeholder.render tip }
